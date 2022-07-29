@@ -5,7 +5,7 @@
 ################################################################################
 
 ### Set wd
-setwd("C:/Users/David/Documents/Thrive Work Stuff/Quick Data Requests/Community Level CPS Data")
+setwd("Path/to/Files")
 
 ### Load Libraries
 library(dplyr)
@@ -15,106 +15,54 @@ library(tmap)
 library(leaflet)
 library(rgeos)
 library(rgdal)
-library(stringr)
-library(readxl)
 library(sp)
 library(raster)
 library(stringr)
-library(googlesheets4)
-
 library(sf)
-library(ggplot2)
-library(tidycensus)
-library(stringr)
+library(cmapgeo)
 
-library(tidyverse)
-library(reshape2)
+### Load Data
+data<-fread("data.csv")
 
-library(survey)
-library(srvyr)
+################################################################################
+### Community Level Edu Outcomes - Attempting to use CMAP
+################################################################################
 
-### Load Community Shapefile
-community<-readOGR(dsn=".",layer="community")
+### Create community area
+community<-cca_sf
+community<-community %>%
+  mutate(community=toupper(cca_name))
 
-### Import CPS Data (copied to a google sheet)
-data<-read_sheet("https://docs.google.com/spreadsheets/d/1cioyQs6o3Dh1wAu7KOcYw6tVDrUenEq5t8p2oDe_Dp4/edit#gid=0",sheet=1)
+### Merge in CPS data
+community<-community %>%
+  left_join(data)
 
-################################
-### Clean Data and Merge to Communities
-################################
-
-### Clean
-data<-data %>%
-  rename(
-    community=`Community Area Name`,
-    freshman_enrollment_sy2020_2021=`Freshman Enrollment`,
-    hs_graduation_spr2020=`High School Graduation`,
-    college_enrollment_fall2020=`College Enrollment`,
-    college_persistence_spr_2020=`College Persistence`,
-    college_completion_spr2020=`College Completion`,
-    postsec_attainment_index=`2021 Postsecondary Attainment Index`
-    ) %>%
-  mutate(
-    community=toupper(community),
-    freshman_enrollment_sy2020_2021=as.numeric(freshman_enrollment_sy2020_2021),
-    hs_graduation_spr2020=as.numeric(hs_graduation_spr2020)*100,
-    college_enrollment_fall2020=as.numeric(college_enrollment_fall2020)*100,
-    college_persistence_spr_2020=as.numeric(college_persistence_spr_2020)*100,
-    college_completion_spr2020=as.numeric(college_completion_spr2020)*100,
-    postsec_attainment_index=as.numeric(postsec_attainment_index)*100
-  )
-
-### Merge to community
-community<-merge(community,data,by="community")
-
-
-################################
-### Create Maps
-################################
-
-### HS Graduation
-tm<-tm_shape(community) +
+### HS Graduation Map
+tm_shape(community) +
   tm_fill("hs_graduation_spr2020",style="jenks",n=5,title = "HS Graduation Rate (Spring 2020)",palette = "Greens") + 
   tm_borders() +
   tm_text("hs_graduation_spr2020",size=.7) +
   tm_credits("Data from To&Through") +
   tm_layout(frame=F)
-tmap_save(tm,"hs_graduation_community.pdf")
 
-### HS Graduation
-tm<-tm_shape(community) +
-  tm_fill("college_enrollment_fall2020",style="jenks",n=5,title = "College Enrollment Rate (Fall 2020)",palette = "Greens",textNA = "> 10 Students") + 
-  tm_borders() +
-  tm_text("college_enrollment_fall2020",size=.7) +
-  tm_credits("Data from To&Through") +
-  tm_layout(frame=F)
-tmap_save(tm,"enrollment_community.pdf")
 
-### College Persistence
-tm<-tm_shape(community) +
-  tm_fill("college_persistence_spr_2020",style="jenks",n=5,title = "College Persistence Rate (Spring 2020)",palette = "Greens",textNA = "> 10 Students") + 
-  tm_borders() +
-  tm_text("college_persistence_spr_2020",size=.7) +
-  tm_credits("Data from To&Through") +
-  tm_layout(frame=F)
-tmap_save(tm,"persistence_community.pdf")
+### Add in a test point
+test_point<-as.data.frame(cbind("lon"=-87.621951,"lat"=41.881722)) # Millenium Park
+test_point<-SpatialPointsDataFrame(test_point,test_point,proj4string = CRS("EPSG:3435"))
 
-### College Completion
-tm<-tm_shape(community) +
-  tm_fill("college_completion_spr2020",style="jenks",n=5,title = "College Completion Rate (Spring 2020)",palette = "Greens",textNA = "> 10 Students") + 
-  tm_borders() +
-  tm_text("college_completion_spr2020",size=.7) +
-  tm_credits("Data from To&Through") +
-  tm_layout(frame=F)
-tmap_save(tm,"completion_community.pdf")
+test_point<-st_as_sf(test_point)
 
-### Postsecondary Attainment Index
-tm<-tm_shape(community) +
-  tm_fill("postsec_attainment_index",style="jenks",n=5,title = "PS Attainment Index (2021) ",palette = "Greens",textNA = "> 10 Students") + 
+### HS Graduation Map with test point
+tm_shape(community) +
+  tm_fill("hs_graduation_spr2020",style="jenks",n=5,title = "HS Graduation Rate (Spring 2020)",palette = "Greens") + 
   tm_borders() +
-  tm_text("postsec_attainment_index",size=.7) +
+  tm_text("hs_graduation_spr2020",size=.7) +
   tm_credits("Data from To&Through") +
+  
+  tm_shape(test_point) +
+  tm_dots(col="black",size=2) +
   tm_layout(frame=F)
-tmap_save(tm,"ps_attainment_index_community.pdf")
+
+
 
 
