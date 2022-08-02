@@ -47,10 +47,9 @@ tm_shape(community) +
 
 
 ### Add in a test point
-test_point<-as.data.frame(cbind("lon"=-87.621951,"lat"=41.881722)) # Millenium Park
-test_point<-SpatialPointsDataFrame(test_point,test_point,proj4string = CRS("EPSG:3435"))
-
-test_point<-st_as_sf(test_point)
+test_point <- as.data.frame(cbind("lon" = -87.621951, "lat" = 41.881722)) %>% # Millenium Park
+  st_as_sf(coords = c("lon", "lat"), crs = st_crs(4326)) %>%
+  st_transform(st_crs(community))
 
 ### HS Graduation Map with test point
 tm_shape(community) +
@@ -60,7 +59,7 @@ tm_shape(community) +
   tm_credits("Data from To&Through") +
   
   tm_shape(test_point) +
-  tm_dots(col="black",size=2) +
+  tm_dots(col="black",size=1) +
   tm_layout(frame=F)
 
 
